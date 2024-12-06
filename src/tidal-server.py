@@ -77,6 +77,16 @@ Removes duplicate entries based on the following logic:
 def filter_items(items):
     unique_items = {}
     print("Filtering items, originally received {} items".format(len(items)))
+    
+    for i in items:
+        item = to_dict(i)
+        popularity = item['popularity']
+        dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
+        hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
+        lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
+        has_version = item.get('version') is not None and item.get('version') != ''
+        print("name={}, id={}, popularity={}, dolby_atmos={}, hires_lossless={}, lossless={}, has_version={}".format(
+            item['name'], item['id'], popularity, dolby_atmos, hires_lossless, lossless, has_version))
 
     for i in items:
         item = to_dict(i)
@@ -87,12 +97,17 @@ def filter_items(items):
         lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
         has_version = item.get('version') is not None and item.get('version') != ''
 
+        if has_version:
+            continue
         if name not in unique_items:
+            print("Adding {} to unique_items".format(item['id']))
             unique_items[name] = item
-        elif popularity > unique_items[name]['popularity']:
+        elif popularity > unique_items.get(name, {}).get('popularity', 0):
+            print("Adding {} to unique_items".format(item['id']))
             unique_items[name] = item
         elif popularity == unique_items[name]['popularity']:
-            if not dolby_atmos and (hires_lossless or lossless) and not has_version:
+            if not dolby_atmos and (hires_lossless or lossless):
+                print("Adding {} to unique_items".format(item['id']))
                 unique_items[name] = item
 
     print("Filtered down to {} items".format(len(unique_items.values())))
