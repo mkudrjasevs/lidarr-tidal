@@ -1,0 +1,4 @@
+tidalapi==0.8.1
+Flask==2.2.5
+mitmproxy==10.2.4
+waitress==3.0.0
