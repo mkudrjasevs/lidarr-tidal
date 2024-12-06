@@ -67,6 +67,27 @@ def to_dict(obj, level=0):
     else:
         return obj
 
+# Filter top tracks and albums based on popularity, Dolby Atmos, and high-resolution audio
+def filter_items(items):
+    unique_items = {}
+    for i in items:
+        item = to_dict(i)
+        name = item['name']
+        popularity = item['popularity']
+        dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
+        hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
+        lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
+
+        if name not in unique_items:
+            unique_items[name] = item
+        elif popularity > unique_items[name]['popularity']:
+            unique_items[name] = item
+        elif popularity == unique_items[name]['popularity']:
+            if not dolby_atmos and (hires_lossless or lossless):
+                unique_items[name] = item
+
+    return list(unique_items.values())
+
 @app.route('/search/artists')
 def search_artists():
     (query, offset, limit) = get_search_params()
@@ -97,28 +118,6 @@ def artist(artist_id):
     artist = session.artist(artist_id)
     artist_dict = to_dict(artist)
     artist_dict['picture_xl'] = artist.image()
-
-    # Filter top tracks and albums based on popularity, Dolby Atmos, and high-resolution audio
-    def filter_items(items):
-        unique_items = {}
-        for i in items:
-            item = to_dict(i)
-            name = item['name']
-            popularity = item['popularity']
-            dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
-            hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
-            lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
-
-            if name not in unique_items:
-                unique_items[name] = item
-            elif popularity > unique_items[name]['popularity']:
-                unique_items[name] = item
-            elif popularity == unique_items[name]['popularity']:
-                if not dolby_atmos and (hires_lossless or lossless):
-                    unique_items[name] = item
-
-        return list(unique_items.values())
-
     artist_dict['top'] = filter_items(artist.get_top_tracks(limit=100))
     artist_dict['albums'] = filter_items(artist.get_albums(limit=200))
     artist_dict['albums'].extend(filter_items(artist.get_ep_singles(limit=200)))
@@ -128,7 +127,7 @@ def artist(artist_id):
 @app.route('/artists/<artist_id>/top')
 def artist_top(artist_id):
     artist = session.artist(artist_id)
-    return { "data": [to_dict(a) for a in artist.get_top_tracks(limit=100)] }
+    return { "data": filter_items(artist.get_top_tracks(limit=100))}
 
 @app.route('/album/<album_id>/tracks')
 def album_tracks(album_id):
@@ -138,8 +137,8 @@ def album_tracks(album_id):
 @app.route('/artists/<artist_id>/albums')
 def artist_albums(artist_id):
     artist = session.artist(artist_id)
-    albums_dict = [to_dict(a) for a in artist.get_albums(limit=200)]
-    albums_dict.extend([to_dict(a) for a in artist.get_ep_singles(limit=200)])
+    albums_dict = filter_items(artist.get_albums(limit=20))
+    albums_dict.extend(filter_items(artist.get_ep_singles(limit=200)))
     return { "data": albums_dict }
 
 if __name__ == '__main__':
