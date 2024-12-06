@@ -97,10 +97,33 @@ def artist(artist_id):
     artist = session.artist(artist_id)
     artist_dict = to_dict(artist)
     artist_dict['picture_xl'] = artist.image()
-    artist_dict['top'] = [to_dict(a) for a in artist.get_top_tracks(limit=100)]
-    artist_dict['albums'] = [to_dict(a) for a in artist.get_albums(limit=200)]
-    artist_dict['albums'].extend([to_dict(a) for a in artist.get_ep_singles(limit=200)])
-    return { "data": artist_dict }
+
+    # Filter top tracks and albums based on popularity, Dolby Atmos, and high-resolution audio
+    def filter_items(items):
+        unique_items = {}
+        for i in items:
+            item = to_dict(i)
+            name = item['name']
+            popularity = item['popularity']
+            dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
+            hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
+            lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
+
+            if name not in unique_items:
+                unique_items[name] = item
+            elif popularity > unique_items[name]['popularity']:
+                unique_items[name] = item
+            elif popularity == unique_items[name]['popularity']:
+                if not dolby_atmos and (hires_lossless or lossless):
+                    unique_items[name] = item
+
+        return list(unique_items.values())
+
+    artist_dict['top'] = filter_items(artist.get_top_tracks(limit=100))
+    artist_dict['albums'] = filter_items(artist.get_albums(limit=200))
+    artist_dict['albums'].extend(filter_items(artist.get_ep_singles(limit=200)))
+
+    return {"data": artist_dict}
 
 @app.route('/artists/<artist_id>/top')
 def artist_top(artist_id):
@@ -120,5 +143,6 @@ def artist_albums(artist_id):
     return { "data": albums_dict }
 
 if __name__ == '__main__':
-    print("TidalApiHelper running at http://0.0.0.0:7272")
-    app.run(host="0.0.0.0", port=7272, debug=True)
+    from waitress import serve
+    print("TidalServer running at http://0.0.0.0:7272")
+    serve(app, host="0.0.0.0", port=7272)

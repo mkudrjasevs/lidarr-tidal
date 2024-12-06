@@ -1,5 +1,6 @@
 import requests
 from urllib.parse import unquote
+import os
 
 from helpers import title_case, normalize, remove_keys, fake_id, get_type, convert_date_format
 from lidarr import get_all_lidarr_artists
@@ -80,7 +81,6 @@ def tidal_artist(id: str) -> dict:
         ],
         "oldids": [],
         "overview": "!!--Imported from Tidal--!!",
-        "rating": {"Count": 0, "Value": None},
         "sortname": ", ".join(reversed(j["name"].split(" "))),
         "status": "active",
         "type": "Artist",
@@ -125,21 +125,16 @@ def get_album(id: str):
 
     lidarr_artists = get_all_lidarr_artists()
 
-    lidarr = None
     tidal = None
-
     for la in lidarr_artists:
         for c in contributors:
             if la["artistName"] == c["artistname"] or normalize(la["artistName"]) == normalize(c["artistname"]):
-                lidarr = la
                 tidal = c
                 break
 
-    # Override MB data
-    lidarr = tidal
     lidarr2 = {
-        "id": lidarr["id"],
-        "artistname": lidarr["artistname"],
+        "id": tidal["id"],
+        "artistname": tidal["artistname"],
         "artistaliases": [],
         "disambiguation": "",
         "overview": "",
@@ -147,7 +142,7 @@ def get_album(id: str):
         "images": [],
         "links": [],
         "oldids": [],
-        "sortname": ", ".join(list(reversed(lidarr["artistname"].split(" ")))),
+        "sortname": ", ".join(list(reversed(tidal["artistname"].split(" ")))),
         "status": "active",
         "type": "Artist",
     }
@@ -163,7 +158,6 @@ def get_album(id: str):
         {"Format": "CD", "Name": "", "Position": v}
         for v in volume_nums
     ]
-    print(media)
 
     # Build track information for each track
     tracks_info = [
@@ -194,8 +188,7 @@ def get_album(id: str):
         "links": [],
         "oldids": [],
         "overview": "!!--Imported from Tidal--!!",
-        "rating": {"Count": 0, "Value": None},
-        "releasedate": d["release_date"],
+        "releasedate": convert_date_format(d["release_date"]),
         "releases": [
             {
                 "country": ["Worldwide"],
@@ -253,7 +246,6 @@ def get_albums(name: str):
             for a in dto_ralbums
         }.values()
     )
-
     return unique_albums
 
 def search(query, is_manual=True):
@@ -261,6 +253,7 @@ def search(query, is_manual=True):
 
     dtolartists = [
         {
+            "album": None,
             "artist": {
                 "artistaliases": [],
                 "artistname": d["name"],
@@ -279,8 +272,13 @@ def search(query, is_manual=True):
                         "type": "tidal",
                     }
                 ],
-                # "type": get_type(d["type"]),
-            }
+                "type": "Artist",
+                "status": "active",
+                "disambiguation": "",
+                "oldids": [],
+                "overview": "",
+            },
+            "score": 100,
         }
         for d in tartists
     ]
@@ -296,59 +294,9 @@ def search(query, is_manual=True):
             sorted_artists.append(a)
     dtolartists = sorted_artists
 
-    if not is_manual:
-        dtolartists = [a["artist"] for a in dtolartists]
-
-        # Override MB data
-        filtered_artists = [
-            a for a in dtolartists if (
-                a["artistname"] == unquote(query)
-                or normalize(a["artistname"]) == normalize(unquote(query))
-            )
-        ]
-        if filtered_artists:
-            dtolartists = [filtered_artists[0]]  # Take the first element
-
     return dtolartists
 
 def get_artist_by_name(name: str):
     artists = tidal_artists(name)
     artist = next((a for a in artists if a["name"] == name or normalize(a["name"]) == normalize(name)), None)
     return artist
-
-def get_artist(lidarr: dict):
-    """Fetches and processes artist information for Lidarr.
-
-    Args:
-    lidarr (dict): A dictionary containing Lidarr data about an artist.
-
-    Returns:
-    dict: The updated Lidarr data with potentially added poster and albums.
-    """
-
-    if "error" in lidarr:
-        return lidarr
-
-    artist = get_artist_by_name(lidarr["artistname"])
-    if artist is None:
-        return lidarr
-
-    poster_found = False
-    for img in lidarr["images"]:
-        if img["CoverType"] == "Poster":
-            poster_found = True
-            break
-
-    if not poster_found:
-        lidarr["images"].append({
-            "CoverType": "Poster",
-            "Url": artist["picture_xl"],
-        })
-
-    albums = get_albums(lidarr["artistname"])
-    
-    # Override MB data
-    lidarr["images"] = [{ "CoverType": "Poster", "Url": artist["picture_xl"] }]
-    lidarr["Albums"] = albums
-
-    return lidarr
