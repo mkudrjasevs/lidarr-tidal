@@ -1,5 +1,5 @@
 <div align="center">
-<h1>Lidarr++Deemix</h1>
+<h1>Lidarr++Tidal</h1>
 <h4 style="font-style: italic">"If Lidarr and Tidal had a child"</h4>
 </div>
 
@@ -31,7 +31,6 @@ This tool helps to enrich Lidarr, by providing a custom proxy, that _hooks into_
 - Update sample docker-compose file
 - Update instructions below
 - Ensure instructions for new setup are clear (session.ini file)
-- Save logs to a file
 
 ## TODO: These need to be updated.
 

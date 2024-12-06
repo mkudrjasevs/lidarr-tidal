@@ -66,10 +66,18 @@ def to_dict(obj, level=0):
         return result
     else:
         return obj
-
-# Filter top tracks and albums based on popularity, Dolby Atmos, and high-resolution audio
+    
+"""
+Removes duplicate entries based on the following logic:
+- Any DOLBY_ATMOS are removed
+- Any with "version" are removed (deluxe, remaster, mix etc)
+- Keep the highest popularity if the names match
+- If there are ties with popularity, keep the entry with the highest quality
+"""
 def filter_items(items):
     unique_items = {}
+    print("Filtering items, originally received {} items".format(len(items)))
+
     for i in items:
         item = to_dict(i)
         name = item['name']
@@ -77,15 +85,17 @@ def filter_items(items):
         dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
         hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
         lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
+        has_version = item.get('version') is not None and item.get('version') != ''
 
         if name not in unique_items:
             unique_items[name] = item
         elif popularity > unique_items[name]['popularity']:
             unique_items[name] = item
         elif popularity == unique_items[name]['popularity']:
-            if not dolby_atmos and (hires_lossless or lossless):
+            if not dolby_atmos and (hires_lossless or lossless) and not has_version:
                 unique_items[name] = item
 
+    print("Filtered down to {} items".format(len(unique_items.values())))
     return list(unique_items.values())
 
 @app.route('/search/artists')
