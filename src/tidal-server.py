@@ -76,7 +76,7 @@ Removes duplicate entries based on the following logic:
 """
 def filter_items(items):
     if os.environ.get('SKIP_FILTERING_ALBUMS', 'False').lower() == 'true':
-        return items
+        return [to_dict(i) for i in items]
 
     unique_items = {}
     print("Filtering items, originally received {} items".format(len(items)))
