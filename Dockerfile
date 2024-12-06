@@ -1,9 +1,9 @@
-FROM python:alpine
+FROM python:3.10-alpine
 
 WORKDIR /app
-RUN apk add --no-cache curl build-base openssl-dev bsd-compat-headers bash
-COPY python/requirements.txt ./python/requirements.txt
-RUN python -m pip install -r python/requirements.txt
+RUN apk add --no-cache libffi libffi-dev curl rust cargo build-base openssl-dev bsd-compat-headers bash
+COPY src/requirements.txt ./src/requirements.txt
+RUN python -m pip install -r src/requirements.txt
 COPY . .
-EXPOSE 8080
+EXPOSE 8081
 CMD ["/app/run.sh"]

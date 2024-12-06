@@ -26,6 +26,13 @@ This tool helps to enrich Lidarr, by providing a custom proxy, that _hooks into_
 > [!CAUTION]
 > If you have installed an older version, please adjust the Proxy settings as described below, otherwise the HTTP-requests will fail
 
+# TODOs:
+
+- Update sample docker-compose file
+- Update instructions below
+- Ensure instructions for new setup are clear (session.ini file)
+- Save logs to a file
+
 ## TODO: These need to be updated.
 
 - Use the provided [docker-compose.yml](./docker-compose.yml) as an example.

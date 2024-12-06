@@ -2,8 +2,7 @@ name: Container
 run-name: ${{ github.ref_name }} - Publishing Container 
 on:
   push:
-    tags:
-      - "*"
+    branches: ['main']
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -14,7 +13,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-      # 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
