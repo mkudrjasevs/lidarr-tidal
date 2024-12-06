@@ -75,19 +75,12 @@ Removes duplicate entries based on the following logic:
 - If there are ties with popularity, keep the entry with the highest quality
 """
 def filter_items(items):
+    if os.environ.get('SKIP_FILTERING_ALBUMS', 'False').lower() == 'true':
+        return items
+
     unique_items = {}
     print("Filtering items, originally received {} items".format(len(items)))
     
-    for i in items:
-        item = to_dict(i)
-        popularity = item['popularity']
-        dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
-        hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
-        lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
-        has_version = item.get('version') is not None and item.get('version') != ''
-        print("name={}, id={}, popularity={}, dolby_atmos={}, hires_lossless={}, lossless={}, has_version={}".format(
-            item['name'], item['id'], popularity, dolby_atmos, hires_lossless, lossless, has_version))
-
     for i in items:
         item = to_dict(i)
         name = item['name']
@@ -96,6 +89,9 @@ def filter_items(items):
         hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
         lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
         has_version = item.get('version') is not None and item.get('version') != ''
+
+        print("Processing name={}, id={}, popularity={}, dolby_atmos={}, hires_lossless={}, lossless={}, has_version={}".format(
+            item['name'], item['id'], popularity, dolby_atmos, hires_lossless, lossless, has_version))
 
         if has_version:
             continue
