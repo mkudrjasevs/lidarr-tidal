@@ -23,8 +23,7 @@ def tidal_artists(name: str) -> list:
     try:
         data = response.json()
     except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error: {e}")
-        print(f"Response text: {response.text}")
+        print(f"Error getting artists by name {name}: {e}")
         return []
     return data["data"]
   
@@ -44,9 +43,8 @@ def tidal_album(id: str) -> dict:
     try:
         data = response.json()
     except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error: {e}")
-        print(f"Response text: {response.text}")
-        return []
+        print(f"Error getting album by id {id}: {e}")
+        return None
     return data["data"]
 
 def tidal_tracks(id: str) -> list:
@@ -64,8 +62,7 @@ def tidal_tracks(id: str) -> list:
     try:
         data = response.json()
     except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error: {e}")
-        print(f"Response text: {response.text}")
+        print(f"Error getting tracks for album {id}: {e}")
         return []
     return data.get("data", [])
 
@@ -75,9 +72,8 @@ def tidal_artist(id: str) -> dict:
     try:
         j = response.json()['data']
     except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error: {e}")
-        print(f"Response text: {response.text}")
-        return {}
+        print(f"Error getting artist by id {id}: {e}")
+        return None
 
     return {
         "Albums": [
@@ -119,8 +115,7 @@ def tidal_albums(name: str) -> list:
         j = response.json()
         total = len(j["data"])
     except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error: {e}")
-        print(f"Response text: {response.text}")
+        print(f"Error getting artist by id {id}: {e}")
         return []
 
     albums = []
@@ -132,13 +127,16 @@ def tidal_albums(name: str) -> list:
             albums.extend(j["data"])
             start += 100
         except (JSONDecodeError, requestsJSONDecodeError) as e:
-            print(f"Error: {e}")
-            print(f"Response text: {response.text}")
+            print(f"Error getting albums by name {name}, offset={start}: {e}")
+            continue
 
     return [a for a in albums if normalize(a["artist"]["name"]) == normalize(name) or a["artist"]["name"] == "Verschillende artiesten"]
 
 def get_album(id: str):
     d = tidal_album(id)
+    if d is None:
+        return None
+
     contributors = [
         {
             "id": fake_id(c["id"], "artist"),
@@ -183,6 +181,8 @@ def get_album(id: str):
 
     # Process album tracks
     tracks = tidal_tracks(d["id"])
+    if not tracks:
+        return None
 
     # Get unique disc/volume nums
     volume_nums = list(set([t["volume_num"] for t in tracks]))
@@ -243,47 +243,49 @@ def get_album(id: str):
         "type": get_type(d["type"]),
     }
 
-def get_albums(name: str):
-    """Fetches and processes album data from Tidal based on a search term.
+# def get_albums(name: str):
+#     """Fetches and processes album data from Tidal based on a search term.
 
-    This function retrieves information about albums matching the provided name
-    from a service like Tidal (replace with your actual Tidal API implementation)
-    and then processes it to conform to a specific format.
+#     This function retrieves information about albums matching the provided name
+#     from a service like Tidal (replace with your actual Tidal API implementation)
+#     and then processes it to conform to a specific format.
 
-    Args:
-    name: The search term to use for finding albums in Tidal.
+#     Args:
+#     name: The search term to use for finding albums in Tidal.
 
-    Returns:
-    A list of dictionaries containing processed album information.
-    """
-    # Fetch album data from Tidal
-    talbums = tidal_albums(name)
+#     Returns:
+#     A list of dictionaries containing processed album information.
+#     """
+#     # Fetch album data from Tidal
+#     talbums = tidal_albums(name)
 
-    # Process album information
-    dto_ralbums = [
-        {
-            "Id": f"{fake_id(d['id'], 'album')}",
-            "OldIds": [],
-            "ReleaseStatuses": ["Official"],
-            "SecondaryTypes": ["Live"] if d["name"].lower().find("live") != -1 else [],
-            "Title": title_case(d["name"]),
-            "LowerTitle": d["name"].lower(),
-            "Type": get_type(d["type"]),
-        }
-        for d in talbums
-    ]
+#     # Process album information
+#     dto_ralbums = [
+#         {
+#             "Id": f"{fake_id(d['id'], 'album')}",
+#             "OldIds": [],
+#             "ReleaseStatuses": ["Official"],
+#             "SecondaryTypes": ["Live"] if d["name"].lower().find("live") != -1 else [],
+#             "Title": title_case(d["name"]),
+#             "LowerTitle": d["name"].lower(),
+#             "Type": get_type(d["type"]),
+#         }
+#         for d in talbums
+#     ]
 
-    # Remove duplicates based on lowercase title
-    unique_albums = list(
-        {
-            a['LowerTitle']: a
-            for a in dto_ralbums
-        }.values()
-    )
-    return unique_albums
+#     # Remove duplicates based on lowercase title
+#     unique_albums = list(
+#         {
+#             a['LowerTitle']: a
+#             for a in dto_ralbums
+#         }.values()
+#     )
+#     return unique_albums
 
-def search(query, is_manual=True):
+def search(query):
     tartists = tidal_artists(query)
+    if not tartists:
+        return None
 
     dtolartists = [
         {
@@ -332,6 +334,9 @@ def search(query, is_manual=True):
 
 def get_artist_by_name(name: str):
     artists = tidal_artists(name)
+    if not artists:
+        return None
+
     artist = next((a for a in artists if a["name"] == name or normalize(a["name"]) == normalize(name)), None)
     if artist is not None:
         return tidal_artist(artist['id'])
