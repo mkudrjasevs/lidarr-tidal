@@ -72,7 +72,7 @@ def tidal_artist(id: str) -> dict:
     try:
         j = response.json()['data']
     except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error getting artist by id {id}: {e}")
+        print(f"Error getting artist by id {id}: {e}. Response = {response.text}")
         return None
 
     return {
@@ -134,7 +134,7 @@ def tidal_albums(name: str) -> list:
 
 def get_album(id: str):
     d = tidal_album(id)
-    if d is None:
+    if not d or not d.get('artists', None):
         return None
 
     contributors = [

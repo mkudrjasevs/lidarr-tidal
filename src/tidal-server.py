@@ -117,7 +117,7 @@ def search_artists():
         dicts = [to_dict(a) for a in search_results]
         for i, a in enumerate(dicts):
             a["picture_xl"] = search_results[i].image()
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error for search artists {query}: {e}")
         dicts = []
     return { "data": dicts }
@@ -130,7 +130,7 @@ def search_albums():
         dicts = [to_dict(a) for a in search_results]
         for i, a in enumerate(dicts):
             a["cover_xl"] = search_results[i].image()
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error for search albums {query}: {e}")
         dicts = []
     return { "data": dicts }
@@ -141,7 +141,7 @@ def album(album_id):
         album = session.album(album_id)
         album_dict = to_dict(album)
         album_dict['cover_xl'] = album.image()
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error retrieving album {album_id}: {e}")
         album_dict = {}
     return { "data": album_dict }
@@ -155,7 +155,7 @@ def artist(artist_id):
         artist_dict['top'] = filter_items(artist.get_top_tracks(limit=100))
         artist_dict['albums'] = filter_items(artist.get_albums(limit=200))
         artist_dict['albums'].extend(filter_items(artist.get_ep_singles(limit=200)))
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error retrieving artist {artist_id}: {e}")
         artist_dict = {}
 
@@ -166,7 +166,7 @@ def artist_top(artist_id):
     try:
         artist = session.artist(artist_id)
         return { "data": filter_items(artist.get_top_tracks(limit=100))}
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error retrieving top for artist {artist_id}: {e}")
         return { "data": [] }
 
@@ -175,7 +175,7 @@ def album_tracks(album_id):
     try:
         album = session.album(album_id)
         return { "data": to_dict(album.tracks()) }
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error retrieving tracks for album {album_id}: {e}")
         return { "data": [] }
 
@@ -185,7 +185,7 @@ def artist_albums(artist_id):
         artist = session.artist(artist_id)
         albums_dict = filter_items(artist.get_albums(limit=20))
         albums_dict.extend(filter_items(artist.get_ep_singles(limit=200)))
-    except Exception as e:
+    except (Exception, TypeError) as e:
         print(f"Error retrieving albums for artist {artist_id}: {e}")
         albums_dict = []
     return { "data": albums_dict }
