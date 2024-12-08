@@ -115,11 +115,11 @@ def search_artists():
     try:
         search_results = session.search(query=query, offset=offset, limit=limit, models=[tidalapi.artist.Artist])["artists"]
         dicts = [to_dict(a) for a in search_results]
+        for i, a in enumerate(dicts):
+            a["picture_xl"] = search_results[i].image()
     except Exception as e:
         print(f"Error: {e}")
         dicts = []
-    for i, a in enumerate(dicts):
-        a["picture_xl"] = search_results[i].image()
     return { "data": dicts }
 
 @app.route('/search/albums')
@@ -128,11 +128,11 @@ def search_albums():
     try:
         search_results = session.search(query=query, offset=offset, limit=limit, models=[tidalapi.album.Album])["albums"]
         dicts = [to_dict(a) for a in search_results]
+        for i, a in enumerate(dicts):
+            a["cover_xl"] = search_results[i].image()
     except Exception as e:
         print(f"Error: {e}")
         dicts = []
-    for i, a in enumerate(dicts):
-        a["cover_xl"] = search_results[i].image()
     return { "data": dicts }
 
 @app.route('/albums/<album_id>')
@@ -140,10 +140,10 @@ def album(album_id):
     try:
         album = session.album(album_id)
         album_dict = to_dict(album)
+        album_dict['cover_xl'] = album.image()
     except Exception as e:
         print(f"Error: {e}")
         album_dict = {}
-    album_dict['cover_xl'] = album.image()
     return { "data": album_dict }
 
 @app.route('/artists/<artist_id>')
@@ -151,13 +151,13 @@ def artist(artist_id):
     try:
         artist = session.artist(artist_id)
         artist_dict = to_dict(artist)
+        artist_dict['picture_xl'] = artist.image()
+        artist_dict['top'] = filter_items(artist.get_top_tracks(limit=100))
+        artist_dict['albums'] = filter_items(artist.get_albums(limit=200))
+        artist_dict['albums'].extend(filter_items(artist.get_ep_singles(limit=200)))
     except Exception as e:
         print(f"Error: {e}")
         artist_dict = {}
-    artist_dict['picture_xl'] = artist.image()
-    artist_dict['top'] = filter_items(artist.get_top_tracks(limit=100))
-    artist_dict['albums'] = filter_items(artist.get_albums(limit=200))
-    artist_dict['albums'].extend(filter_items(artist.get_ep_singles(limit=200)))
 
     return {"data": artist_dict}
 
@@ -165,29 +165,29 @@ def artist(artist_id):
 def artist_top(artist_id):
     try:
         artist = session.artist(artist_id)
+        return { "data": filter_items(artist.get_top_tracks(limit=100))}
     except Exception as e:
         print(f"Error: {e}")
         return { "data": [] }
-    return { "data": filter_items(artist.get_top_tracks(limit=100))}
 
 @app.route('/album/<album_id>/tracks')
 def album_tracks(album_id):
     try:
         album = session.album(album_id)
+        return { "data": to_dict(album.tracks()) }
     except Exception as e:
         print(f"Error: {e}")
         return { "data": [] }
-    return { "data": to_dict(album.tracks()) }
 
 @app.route('/artists/<artist_id>/albums')
 def artist_albums(artist_id):
     try:
         artist = session.artist(artist_id)
+        albums_dict = filter_items(artist.get_albums(limit=20))
+        albums_dict.extend(filter_items(artist.get_ep_singles(limit=200)))
     except Exception as e:
         print(f"Error: {e}")
-        return { "data": [] }
-    albums_dict = filter_items(artist.get_albums(limit=20))
-    albums_dict.extend(filter_items(artist.get_ep_singles(limit=200)))
+        albums_dict = []
     return { "data": albums_dict }
 
 if __name__ == '__main__':
