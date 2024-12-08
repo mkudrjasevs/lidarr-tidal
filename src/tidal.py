@@ -1,6 +1,7 @@
 import requests
 from urllib.parse import unquote
-import os
+from requests.exceptions import JSONDecodeError as requestsJSONDecodeError
+from json import JSONDecodeError
 
 from helpers import title_case, normalize, remove_keys, fake_id, get_type, convert_date_format
 from lidarr import get_all_lidarr_artists
@@ -17,9 +18,13 @@ def tidal_artists(name: str) -> list:
     Returns:
     A list of artist data.
     """
-
+    print(f"Fetching artists from Tidal for name: {name}")
     response = requests.get(f"{tidal_url}/search/artists?limit=100&offset=0&q={name}")
-    data = response.json()
+    try:
+        data = response.json()
+    except (JSONDecodeError, requestsJSONDecodeError) as e:
+        print(f"Error: {e}")
+        return []
     return data["data"]
   
 def tidal_album(id: str) -> dict:
@@ -33,8 +38,13 @@ def tidal_album(id: str) -> dict:
     A dictionary containing album details.
     """
 
+    print("Fetching album from Tidal for id: {}", id)
     response = requests.get(f"{tidal_url}/albums/{id}")
-    data = response.json()
+    try:
+        data = response.json()
+    except (JSONDecodeError, requestsJSONDecodeError) as e:
+        print(f"Error: {e}")
+        return []
     return data["data"]
 
 def tidal_tracks(id: str) -> list:
@@ -47,14 +57,23 @@ def tidal_tracks(id: str) -> list:
     Returns:
     A list of track data.
     """
-
+    print(f"Fetching tracks from Tidal for album id: {id}")
     response = requests.get(f"{tidal_url}/album/{id}/tracks")
-    data = response.json()
-    return data.get("data", [])  # Handle potential missing "data" key
+    try:
+        data = response.json()
+    except (JSONDecodeError, requestsJSONDecodeError) as e:
+        print(f"Error: {e}")
+        return []
+    return data.get("data", [])
 
 def tidal_artist(id: str) -> dict:
+    print(f"Fetching artist from Tidal for id: {id}")
     response = requests.get(f"{tidal_url}/artists/{id}")
-    j = response.json()['data']
+    try:
+        j = response.json()['data']
+    except (JSONDecodeError, requestsJSONDecodeError) as e:
+        print(f"Error: {e}")
+        return {}
 
     return {
         "Albums": [
@@ -90,16 +109,25 @@ def tidal_albums(name: str) -> list:
     total = 0
     start = 0
 
+    print(f"Fetching artist from Tidal for id: {id}")
     response = requests.get(f"{tidal_url}/search/albums?limit=1&offset=0&q={name}")
-    j = response.json()
-    total = len(j["data"])
+    try:
+        j = response.json()
+        total = len(j["data"])
+    except (JSONDecodeError, requestsJSONDecodeError) as e:
+        print(f"Error: {e}")
+        return []
 
     albums = []
     while start < total:
+        print(f"Searching albums in Tidal with name {name} and offset {start}")
         response = requests.get(f"{tidal_url}/search/albums?limit=100&offset={start}&q={name}")
-        j = response.json()
-        albums.extend(j["data"])
-        start += 100
+        try:
+            j = response.json()
+            albums.extend(j["data"])
+            start += 100
+        except (JSONDecodeError, requestsJSONDecodeError) as e:
+            print(f"Error: {e}")
 
     return [a for a in albums if normalize(a["artist"]["name"]) == normalize(name) or a["artist"]["name"] == "Verschillende artiesten"]
 
