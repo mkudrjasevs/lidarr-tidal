@@ -63,8 +63,7 @@ def do_api(req, path):
 
     if "/v0.4/search" in url:
         query = req.args.get("query")
-        all_types = "type=all" in url
-        lidarr_data = search(query, all_types)
+        lidarr_data = search(query)
         status_code = 200 if lidarr_data is not None else 404
         return jsonify(lidarr_data), status_code
 
