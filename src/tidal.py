@@ -38,7 +38,7 @@ def tidal_album(id: str) -> dict:
     A dictionary containing album details.
     """
 
-    print("Fetching album from Tidal for id: {}", id)
+    print(f"Fetching album from Tidal for id: {id}")
     response = requests.get(f"{tidal_url}/albums/{id}")
     try:
         data = response.json()
