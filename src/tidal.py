@@ -73,7 +73,14 @@ def tidal_artist(id: str) -> dict:
         j = response.json()['data']
     except (JSONDecodeError, requestsJSONDecodeError) as e:
         print(f"Error getting artist by id {id}: {e}. Response = {response.text}")
-        return None
+        return {
+            "Albums": [],
+            "artistaliases": [],
+            "id": fake_id(j["id"], "artist"),
+            "overview": "!!--Imported from Tidal--!!",
+            "status": "active",
+            "type": "Artist",
+        }
 
     return {
         "Albums": [
