@@ -47,6 +47,19 @@ def do_scrobbler(req):
 
 def do_api(req, path):
     url = f"{lidarr_api_url}/{path}"
+    method = req.method
+    body = req.get_data()
+    # TODO: do I need these headers?
+    # headers = {key: value for key, value in req.headers.items() if key not in ("host", "connection")}
+    headers = {}
+    try:
+        response = requests.request(method, url, headers=headers, data=body)
+        response.headers.pop("content-encoding", None)
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    lidarr_data = response.json()
+    status_code = 200 if lidarr_data is not None else 404
 
     if "/v0.4/search" in url:
         query = req.args.get("query")
@@ -63,18 +76,6 @@ def do_api(req, path):
         else:
             # This is added to make the service work with existing artists in
             # lidarr that use MBID.
-            method = req.method
-            body = req.get_data()
-            # TODO: do I need these headers?
-            # headers = {key: value for key, value in req.headers.items() if key not in ("host", "connection")}
-            headers = {}
-            try:
-                response = requests.request(method, url, headers=headers, data=body)
-                response.headers.pop("content-encoding", None)
-            except requests.exceptions.RequestException as e:
-                print(f"Error: {e}")
-                return jsonify({"error": str(e)}), 500
-            lidarr_data = response.json()
             lidarr_data = get_artist_by_name(lidarr_data['artistname'])
             status_code = 200 if lidarr_data is not None else 404
         return jsonify(lidarr_data), status_code
@@ -86,7 +87,8 @@ def do_api(req, path):
             status_code = 200 if lidarr_data is not None else 404
         return jsonify(lidarr_data), status_code
 
-    return "Not a valid URL called", 404
+    # Passthrough to Lidarr api (for example for Charts and Series)
+    return jsonify(lidarr_data), status_code
 
 
 if __name__ == "__main__":
