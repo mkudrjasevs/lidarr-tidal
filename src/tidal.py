@@ -24,6 +24,7 @@ def tidal_artists(name: str) -> list:
         data = response.json()
     except (JSONDecodeError, requestsJSONDecodeError) as e:
         print(f"Error: {e}")
+        print(f"Response text: {response.text}")
         return []
     return data["data"]
   
@@ -44,6 +45,7 @@ def tidal_album(id: str) -> dict:
         data = response.json()
     except (JSONDecodeError, requestsJSONDecodeError) as e:
         print(f"Error: {e}")
+        print(f"Response text: {response.text}")
         return []
     return data["data"]
 
@@ -63,6 +65,7 @@ def tidal_tracks(id: str) -> list:
         data = response.json()
     except (JSONDecodeError, requestsJSONDecodeError) as e:
         print(f"Error: {e}")
+        print(f"Response text: {response.text}")
         return []
     return data.get("data", [])
 
@@ -73,6 +76,7 @@ def tidal_artist(id: str) -> dict:
         j = response.json()['data']
     except (JSONDecodeError, requestsJSONDecodeError) as e:
         print(f"Error: {e}")
+        print(f"Response text: {response.text}")
         return {}
 
     return {
@@ -116,6 +120,7 @@ def tidal_albums(name: str) -> list:
         total = len(j["data"])
     except (JSONDecodeError, requestsJSONDecodeError) as e:
         print(f"Error: {e}")
+        print(f"Response text: {response.text}")
         return []
 
     albums = []
@@ -128,6 +133,7 @@ def tidal_albums(name: str) -> list:
             start += 100
         except (JSONDecodeError, requestsJSONDecodeError) as e:
             print(f"Error: {e}")
+            print(f"Response text: {response.text}")
 
     return [a for a in albums if normalize(a["artist"]["name"]) == normalize(name) or a["artist"]["name"] == "Verschillende artiesten"]
 
