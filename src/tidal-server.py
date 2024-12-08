@@ -90,16 +90,16 @@ def filter_items(items):
         lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
         has_version = item.get('version') is not None and item.get('version') != ''
 
-        print("Processing name={}, id={}, popularity={}, dolby_atmos={}, hires_lossless={}, lossless={}, has_version={}".format(
-            item['name'], item['id'], popularity, dolby_atmos, hires_lossless, lossless, has_version))
+        # print("Processing name={}, id={}, popularity={}, dolby_atmos={}, hires_lossless={}, lossless={}, has_version={}".format(
+        #     item['name'], item['id'], popularity, dolby_atmos, hires_lossless, lossless, has_version))
 
         if has_version:
             continue
         if name not in unique_items:
-            print("Adding {} to unique_items".format(item['id']))
+            # print("Adding {} to unique_items".format(item['id']))
             unique_items[name] = item
         elif popularity > unique_items.get(name, {}).get('popularity', 0):
-            print("Adding {} to unique_items".format(item['id']))
+            # print("Adding {} to unique_items".format(item['id']))
             unique_items[name] = item
         # elif popularity == unique_items[name]['popularity']:
         #     if not dolby_atmos and (hires_lossless or lossless):
