@@ -101,10 +101,10 @@ def filter_items(items):
         elif popularity > unique_items.get(name, {}).get('popularity', 0):
             print("Adding {} to unique_items".format(item['id']))
             unique_items[name] = item
-        elif popularity == unique_items[name]['popularity']:
-            if not dolby_atmos and (hires_lossless or lossless):
-                print("Adding {} to unique_items".format(item['id']))
-                unique_items[name] = item
+        # elif popularity == unique_items[name]['popularity']:
+        #     if not dolby_atmos and (hires_lossless or lossless):
+        #         print("Adding {} to unique_items".format(item['id']))
+        #         unique_items[name] = item
 
     print("Filtered down to {} items".format(len(unique_items.values())))
     return list(unique_items.values())

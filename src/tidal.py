@@ -299,4 +299,6 @@ def search(query, is_manual=True):
 def get_artist_by_name(name: str):
     artists = tidal_artists(name)
     artist = next((a for a in artists if a["name"] == name or normalize(a["name"]) == normalize(name)), None)
-    return artist
+    if artist is not None:
+        return tidal_artist(artist['id'])
+    return None
