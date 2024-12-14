@@ -1,4 +1,3 @@
-import datetime
 import unicodedata
 
 
@@ -56,16 +55,14 @@ def get_type(rc: str) -> str:
     return title_case(type)
 
 
-def convert_date_format(date_string):
-  """Converts a date string in the format 'Fri, 31 Jan 2020 00:00:00 GMT' to 'YYYY-MM-DD'.
+def convert_date_format(dt_obj):
+  """
+  Converts a datetime.datetime object to the YYYY-MM-DD format.
 
   Args:
-    date_string: The date string to convert.
+    dt_obj: The datetime.datetime object to convert.
 
   Returns:
-    The converted date string in the format 'YYYY-MM-DD'.
+    A string representing the date in YYYY-MM-DD format.
   """
-
-  date_object = datetime.datetime.strptime(date_string, '%a, %d %b %Y %H:%M:%S %Z')
-  formatted_date = date_object.strftime('%Y-%m-%d')
-  return formatted_date
+  return dt_obj.strftime('%Y-%m-%d')

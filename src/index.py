@@ -61,13 +61,13 @@ def do_api(req, path):
     lidarr_data = response.json()
     status_code = 200 if lidarr_data is not None else 404
 
-    if "/v0.4/search" in url:
+    if "/v0.4/search" in url or "/v1/search" in url:
         query = req.args.get("query")
         lidarr_data = search(query)
         status_code = 200 if lidarr_data is not None else 404
         return jsonify(lidarr_data), status_code
 
-    elif "/v0.4/artist/" in url:
+    elif "/v0.4/artist/" in url or "/v1/artist/" in url:
         if "-aaaa-" in path:
             artist_id = path.split("/")[-1].split("-")[-1].replace("a", "")
             lidarr_data = tidal_artist(artist_id)
@@ -76,10 +76,12 @@ def do_api(req, path):
             # This is added to make the service work with existing artists in
             # lidarr that use MBID.
             lidarr_data = get_artist_by_name(lidarr_data['artistname'])
+            # Set old ID here (MBID)
+            lidarr_data['oldids'] = [lidarr_data['id']]
             status_code = 200 if lidarr_data is not None else 404
         return jsonify(lidarr_data), status_code
 
-    elif "/v0.4/album/" in url:
+    elif "/v0.4/album/" in url or "/v1/album/" in url:
         if "-bbbb-" in path:
             album_id = path.split("/")[-1].split("-")[-1].replace("b", "")
             lidarr_data = get_album(album_id)
@@ -92,5 +94,5 @@ def do_api(req, path):
 
 if __name__ == "__main__":
     from waitress import serve
-    print("lidarr-tidal running at http://0.0.0.0:7272")
+    print("lidarr-tidal running at http://0.0.0.0:7171")
     serve(app, host="0.0.0.0", port=7171)

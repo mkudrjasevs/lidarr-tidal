@@ -2,11 +2,200 @@ import requests
 from urllib.parse import unquote
 from requests.exceptions import JSONDecodeError as requestsJSONDecodeError
 from json import JSONDecodeError
+import os
+import tidalapi
+from configparser import ConfigParser
+from datetime import timedelta
 
 from helpers import title_case, normalize, remove_keys, fake_id, get_type, convert_date_format
 from lidarr import get_all_lidarr_artists
 
-tidal_url = "http://127.0.0.1:7272"
+############################################
+## Establish Tidal session
+############################################
+
+session_path = os.environ.get('SESSION_CONFIG_FILE')
+session = tidalapi.Session()
+
+# If session file exists, use that
+if os.path.isfile(session_path):
+    config = ConfigParser()
+    config.read([session_path])
+    try:
+        session.load_oauth_session(
+            config['session']['token_type'],
+            config['session']['access_token'],
+            config['session'].get('refresh_token', None),
+            config['session'].get('expiry_time', None)
+        )
+    except KeyError:
+        print('supplied configuration to restore session is incomplete')
+    else:
+        if not session.check_login():
+            print('loaded session appears to be not authenticated')
+
+
+if not session.check_login():
+    print('authenticating new session')
+    session.login_oauth_simple()
+    config = ConfigParser()
+    config['session'] = {
+        'token_type': session.token_type,
+        'access_token': session.access_token,
+        'refresh_token': session.refresh_token,
+        'expiry_time': session.expiry_time
+    }
+    with open(session_path, 'w') as configfile:
+        config.write(configfile)
+
+
+def to_dict(obj, level=0):
+    if level >= 4:
+        return None
+
+    if isinstance(obj, dict):
+        return {k: to_dict(v, level=level+1) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [to_dict(v, level=level+1) for v in obj]
+    elif isinstance(obj, timedelta):
+            return int(obj)
+    elif hasattr(obj, '__dict__'):
+        result = {}
+        for k, v in obj.__dict__.items():
+            try:
+                result[k] = to_dict(v, level=level+1)
+            except Exception:
+                pass  # Skip fields that raise exceptions
+        return result
+    else:
+        return obj
+
+
+############################################
+## Tidal helpers
+############################################
+
+"""
+Removes duplicate entries based on the following logic:
+- Any DOLBY_ATMOS are removed
+- Any with "version" are removed (deluxe, remaster, mix etc)
+- Keep the highest popularity if the names match
+- If there are ties with popularity, keep the entry with the highest quality
+"""
+def filter_items(items):
+    if os.environ.get('SKIP_FILTERING_ALBUMS', 'False').lower() == 'true':
+        return [to_dict(i) for i in items]
+
+    unique_items = {}
+    print("Filtering items, originally received {} items".format(len(items)))
+    
+    for i in items:
+        item = to_dict(i)
+        name = item['name']
+        popularity = item['popularity']
+        dolby_atmos = 'DOLBY_ATMOS' in item.get('audio_modes', [])
+        hires_lossless = 'HIRES_LOSSLESS' in item.get('media_metadata_tags', [])
+        lossless = 'LOSSLESS' in item.get('media_metadata_tags', [])
+        has_version = item.get('version') is not None and item.get('version') != ''
+
+        # print("Processing name={}, id={}, popularity={}, dolby_atmos={}, hires_lossless={}, lossless={}, has_version={}".format(
+        #     item['name'], item['id'], popularity, dolby_atmos, hires_lossless, lossless, has_version))
+
+        if has_version:
+            continue
+        if name not in unique_items:
+            # print("Adding {} to unique_items".format(item['id']))
+            unique_items[name] = item
+        elif popularity > unique_items.get(name, {}).get('popularity', 0):
+            # print("Adding {} to unique_items".format(item['id']))
+            unique_items[name] = item
+        # elif popularity == unique_items[name]['popularity']:
+        #     if not dolby_atmos and (hires_lossless or lossless):
+        #         print("Adding {} to unique_items".format(item['id']))
+        #         unique_items[name] = item
+
+    print("Filtered down to {} items".format(len(unique_items.values())))
+    return list(unique_items.values())
+
+############################################
+## Tidal API calls
+############################################
+
+def search_artists(query, offset, limit):
+    try:
+        search_results = session.search(query=query, offset=offset, limit=limit, models=[tidalapi.artist.Artist])["artists"]
+        dicts = [to_dict(a) for a in search_results]
+        for i, a in enumerate(dicts):
+            a["picture_xl"] = search_results[i].image()
+    except (Exception, TypeError) as e:
+        print(f"Error for search artists {query}: {e}")
+        dicts = []
+    return { "data": dicts }
+
+def search_albums(query, offset, limit):
+    try:
+        search_results = session.search(query=query, offset=offset, limit=limit, models=[tidalapi.album.Album])["albums"]
+        dicts = [to_dict(a) for a in search_results]
+        for i, a in enumerate(dicts):
+            a["cover_xl"] = search_results[i].image()
+    except (Exception, TypeError) as e:
+        print(f"Error for search albums {query}: {e}")
+        dicts = []
+    return { "data": dicts }
+
+def album(album_id):
+    try:
+        album = session.album(album_id)
+        album_dict = to_dict(album)
+        album_dict['cover_xl'] = album.image()
+    except (Exception, TypeError) as e:
+        print(f"Error retrieving album {album_id}: {e}")
+        album_dict = {}
+    return { "data": album_dict }
+
+def artist(artist_id):
+    try:
+        artist = session.artist(artist_id)
+        artist_dict = to_dict(artist)
+        artist_dict['picture_xl'] = artist.image()
+        artist_dict['top'] = filter_items(artist.get_top_tracks(limit=100))
+        artist_dict['albums'] = filter_items(artist.get_albums(limit=200))
+        artist_dict['albums'].extend(filter_items(artist.get_ep_singles(limit=200)))
+    except (Exception, TypeError) as e:
+        print(f"Error retrieving artist {artist_id}: {e}")
+        artist_dict = {}
+
+    return {"data": artist_dict}
+
+def artist_top(artist_id):
+    try:
+        artist = session.artist(artist_id)
+        return { "data": filter_items(artist.get_top_tracks(limit=100))}
+    except (Exception, TypeError) as e:
+        print(f"Error retrieving top for artist {artist_id}: {e}")
+        return { "data": [] }
+
+def album_tracks(album_id):
+    try:
+        album = session.album(album_id)
+        return { "data": to_dict(album.tracks()) }
+    except (Exception, TypeError) as e:
+        print(f"Error retrieving tracks for album {album_id}: {e}")
+        return { "data": [] }
+
+def artist_albums(artist_id):
+    try:
+        artist = session.artist(artist_id)
+        albums_dict = filter_items(artist.get_albums(limit=20))
+        albums_dict.extend(filter_items(artist.get_ep_singles(limit=200)))
+    except (Exception, TypeError) as e:
+        print(f"Error retrieving albums for artist {artist_id}: {e}")
+        albums_dict = []
+    return { "data": albums_dict }
+
+############################################
+## Tidal Convenience Wrappers
+############################################
 
 def tidal_artists(name: str) -> list:
     """
@@ -19,12 +208,7 @@ def tidal_artists(name: str) -> list:
     A list of artist data.
     """
     print(f"Fetching artists from Tidal for name: {name}")
-    response = requests.get(f"{tidal_url}/search/artists?limit=100&offset=0&q={name}")
-    try:
-        data = response.json()
-    except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error getting artists by name {name}: {e}")
-        return []
+    data = search_artists(query=name, offset=0, limit=100)
     return data["data"]
   
 def tidal_album(id: str) -> dict:
@@ -39,12 +223,7 @@ def tidal_album(id: str) -> dict:
     """
 
     print(f"Fetching album from Tidal for id: {id}")
-    response = requests.get(f"{tidal_url}/albums/{id}")
-    try:
-        data = response.json()
-    except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error getting album by id {id}: {e}")
-        return None
+    data = album(id)
     return data["data"]
 
 def tidal_tracks(id: str) -> list:
@@ -58,29 +237,13 @@ def tidal_tracks(id: str) -> list:
     A list of track data.
     """
     print(f"Fetching tracks from Tidal for album id: {id}")
-    response = requests.get(f"{tidal_url}/album/{id}/tracks")
-    try:
-        data = response.json()
-    except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error getting tracks for album {id}: {e}")
-        return []
+    data = album_tracks(id)
     return data.get("data", [])
 
 def tidal_artist(id: str) -> dict:
     print(f"Fetching artist from Tidal for id: {id}")
-    response = requests.get(f"{tidal_url}/artists/{id}")
-    try:
-        j = response.json()['data']
-    except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error getting artist by id {id}: {e}. Response = {response.text}")
-        return {
-            "Albums": [],
-            "artistaliases": [],
-            "id": fake_id(j["id"], "artist"),
-            "overview": "!!--Imported from Tidal--!!",
-            "status": "active",
-            "type": "Artist",
-        }
+    data = artist(id)
+    j = data['data']
 
     return {
         "Albums": [
@@ -117,25 +280,15 @@ def tidal_albums(name: str) -> list:
     start = 0
 
     print(f"Fetching artist from Tidal for id: {id}")
-    response = requests.get(f"{tidal_url}/search/albums?limit=1&offset=0&q={name}")
-    try:
-        j = response.json()
-        total = len(j["data"])
-    except (JSONDecodeError, requestsJSONDecodeError) as e:
-        print(f"Error getting artist by id {id}: {e}")
-        return []
+    response = search_albums(query=name, offset=0, limit=1)
+    total = len(j["data"])
 
     albums = []
     while start < total:
         print(f"Searching albums in Tidal with name {name} and offset {start}")
-        response = requests.get(f"{tidal_url}/search/albums?limit=100&offset={start}&q={name}")
-        try:
-            j = response.json()
-            albums.extend(j["data"])
-            start += 100
-        except (JSONDecodeError, requestsJSONDecodeError) as e:
-            print(f"Error getting albums by name {name}, offset={start}: {e}")
-            continue
+        response = search_albums(query=name, offset=start, limit=100)
+        albums.extend(response["data"])
+        start += 100
 
     return [a for a in albums if normalize(a["artist"]["name"]) == normalize(name) or a["artist"]["name"] == "Verschillende artiesten"]
 
@@ -249,45 +402,6 @@ def get_album(id: str):
         "title": title_case(d["name"]),
         "type": get_type(d["type"]),
     }
-
-# def get_albums(name: str):
-#     """Fetches and processes album data from Tidal based on a search term.
-
-#     This function retrieves information about albums matching the provided name
-#     from a service like Tidal (replace with your actual Tidal API implementation)
-#     and then processes it to conform to a specific format.
-
-#     Args:
-#     name: The search term to use for finding albums in Tidal.
-
-#     Returns:
-#     A list of dictionaries containing processed album information.
-#     """
-#     # Fetch album data from Tidal
-#     talbums = tidal_albums(name)
-
-#     # Process album information
-#     dto_ralbums = [
-#         {
-#             "Id": f"{fake_id(d['id'], 'album')}",
-#             "OldIds": [],
-#             "ReleaseStatuses": ["Official"],
-#             "SecondaryTypes": ["Live"] if d["name"].lower().find("live") != -1 else [],
-#             "Title": title_case(d["name"]),
-#             "LowerTitle": d["name"].lower(),
-#             "Type": get_type(d["type"]),
-#         }
-#         for d in talbums
-#     ]
-
-#     # Remove duplicates based on lowercase title
-#     unique_albums = list(
-#         {
-#             a['LowerTitle']: a
-#             for a in dto_ralbums
-#         }.values()
-#     )
-#     return unique_albums
 
 def search(query):
     tartists = tidal_artists(query)
