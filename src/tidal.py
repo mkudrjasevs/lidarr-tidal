@@ -1,4 +1,4 @@
-import requests
+import requests_cache
 from urllib.parse import unquote
 from requests.exceptions import JSONDecodeError as requestsJSONDecodeError
 from json import JSONDecodeError
@@ -6,9 +6,29 @@ import os
 import tidalapi
 from configparser import ConfigParser
 from datetime import timedelta
+import logging
 
 from helpers import title_case, normalize, remove_keys, fake_id, get_type, convert_date_format
 from lidarr import get_all_lidarr_artists
+
+logging.basicConfig(level='DEBUG')
+# Cache HTTP requests for 1 minute
+urls_expire_after = {
+    'resources.tidal.com/*': 60 * 60 * 24 * 7, # 1 week
+    'api.tidal.com/v1/sessions*': requests_cache.DO_NOT_CACHE,
+    'api.tidal.com/v1/users*': requests_cache.DO_NOT_CACHE,
+    'auth.tidal.com/*': requests_cache.DO_NOT_CACHE,
+    'api.tidal.com/v1/*': 60 * 60 * 24, # 1 day
+    'api.lidarr.audio/*': requests_cache.DO_NOT_CACHE,
+    'ws.audioscrobbler.com/*': requests_cache.DO_NOT_CACHE,
+}
+requests_cache.install_cache(cache_name=os.environ.get('CACHE_FILE'),
+                             backend='sqlite',
+                             urls_expire_after=urls_expire_after,
+                             expire_after=60, # default cache for a minute
+                             allowable_codes=[200],
+                             ignored_parameters=['sessionId'],
+                             allowable_methods=('GET'))
 
 ############################################
 ## Establish Tidal session

@@ -2,3 +2,4 @@ tidalapi
 Flask
 mitmproxy
 waitress
+requests-cache

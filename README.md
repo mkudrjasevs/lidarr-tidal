@@ -26,24 +26,59 @@ This tool helps to enrich Lidarr, by providing a custom proxy, that _hooks into_
 > [!CAUTION]
 > If you have installed an older version, please adjust the Proxy settings as described below, otherwise the HTTP-requests will fail
 
-# TODOs:
+Use the following Docker Compose file:
 
-- Update sample docker-compose file
-- Update instructions below
-- Ensure instructions for new setup are clear (session.ini file)
+```yaml
+---
+services:
+  lidarr-tidal:
+    image: ghcr.io/d3mystified/lidarr-tidal:main
+    # build:
+    #  context: /home/ada/apps/lidarr/lidarr-tidal-mitmproxy
+    #  dockerfile: Dockerfile
+    container_name: lidarr-tidal
+    restart: always
+    # ports: # optional - just use lidarr-tidal:8081 to connect from the lidarr container
+    #   - 8687:8081
+    volumes:
+      - /path/to/config:/config
+    environment:
+      - LIDARR_URL=https://url.here
+      - LIDARR_API_KEY=api.key
+      - SESSION_CONFIG_FILE=/config/session.ini
+      - CACHE_FILE=/config/cache.sqlite
+      - SKIP_FILTERING_ALBUMS=False
+```
 
-## TODO: These need to be updated.
-
-- Use the provided [docker-compose.yml](./docker-compose.yml) as an example.
-  - **DEEMIX_ARL=xxx** your deezer ARL (get it from your browsers cookies)
-  - **PRIO_DEEMIX=true** If albums with the same name exist, prioritize the ones comming from deemix
-  - **OVERRIDE_MB=true** override MusicBrainz completely - **WARNING!** This will delete all your artists/albums imported from MusicBrainz.
-  - **LIDARR_URL=http://lidarr:8686** The URL of your Lidarr instance (with port), so this library can communicate with it. Important for **OVERRIDE_MB**
-  - **LIDARR_API_KEY=xxx** The Lidarr API Key. Important for **OVERRIDE_MB**
+- Use the provided Docker Compose above as an example.
+  - **LIDARR_URL=http://lidarr:8686**: The URL of your Lidarr instance (with port), so this library can communicate with it.
+  - **LIDARR_API_KEY=xxx**: The Lidarr API Key.
+  - **SESSION_CONFIG_FILE=/config/session.ini**: Where Tidal session details are stored.
+  - **CACHE_FILE=/config/cache.sqlite**: Where Tidal API calls are cached.
+  - **SKIP_FILTERING_ALBUMS=False**: Suggest leaving this disabled unless you know exactly what it does.
 - Go to **Lidarr -> Settings -> General**
   - **Certificate Validation:** to _Disabled_
   - **Use Proxy:** ✅
   - **Proxy Type:** HTTP(S)
   - **Hostname:** container-name/IP of the machine where lidarr-deemix is running
-  - **Port:** 8080 (if using container-name), otherwise the port you exposed the service to
+  - **Port:** 8081 (if using container-name), otherwise the port you exposed the service to
   - **Bypass Proxy for local addresses:** ✅
+
+
+## Development
+
+### Using Docker
+
+```
+docker compose build lidarr-tidal
+docker compose up -d
+```
+
+Then run the container using docker compose.
+
+### Without Docker
+
+```
+pip3 install -r src/requirements.txt
+LIDARR_URL=https://url.here LIDARR_API_KEY=api.key SESSION_CONFIG_FILE=src/session.ini CACHE_FILE=src/cache.sqlite SKIP_FILTERING_ALBUMS=False python3 src/index.py
+```
