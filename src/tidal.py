@@ -18,7 +18,7 @@ urls_expire_after = {
     'api.tidal.com/v1/sessions*': requests_cache.DO_NOT_CACHE,
     'api.tidal.com/v1/users*': requests_cache.DO_NOT_CACHE,
     'auth.tidal.com/*': requests_cache.DO_NOT_CACHE,
-    'api.tidal.com/v1/*': 60 * 60 * 24, # 1 day
+    'api.tidal.com/v1/*': 60 * 60 * 24 * 4, # 4 days
     'api.lidarr.audio/*': requests_cache.DO_NOT_CACHE,
     'ws.audioscrobbler.com/*': requests_cache.DO_NOT_CACHE,
 }
