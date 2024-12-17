@@ -23,9 +23,6 @@ This tool helps to enrich Lidarr, by providing a custom proxy, that _hooks into_
 
 ## 💻️ Installation
 
-> [!CAUTION]
-> If you have installed an older version, please adjust the Proxy settings as described below, otherwise the HTTP-requests will fail
-
 Use the following Docker Compose file:
 
 ```yaml
@@ -64,6 +61,8 @@ services:
   - **Port:** 8081 (if using container-name), otherwise the port you exposed the service to
   - **Bypass Proxy for local addresses:** ✅
 
+> [!CAUTION]
+> If you start using this with an existing installation, you will run into Tidal API limits. To better handle that, use the provided `lidarr_refresh_artists.py` script.
 
 ## Development
 
