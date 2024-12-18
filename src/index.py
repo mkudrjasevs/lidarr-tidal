@@ -62,7 +62,7 @@ def do_api(req, path):
     status_code = 200 if lidarr_data is not None else 404
 
     if "/ping" in url:
-        return { "health": "pong" }, 200
+        return jsonify({ "health": "pong" }), 200
 
     elif "/v0.4/search" in url or "/v1/search" in url:
         query = req.args.get("query")
