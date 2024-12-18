@@ -23,6 +23,9 @@ def proxy(path):
     host = headers.get("x-proxy-host")
     if host == "ws.audioscrobbler.com":
         return do_scrobbler(request)
+    if path == "ping":
+        return jsonify("pong"), 200
+
     return do_api(request, path)
 
 
@@ -61,10 +64,7 @@ def do_api(req, path):
     lidarr_data = response.json()
     status_code = 200 if lidarr_data is not None else 404
 
-    if "/ping" in url:
-        return jsonify({ "health": "pong" }), 200
-
-    elif "/v0.4/search" in url or "/v1/search" in url:
+    if "/v0.4/search" in url or "/v1/search" in url:
         query = req.args.get("query")
         lidarr_data = search(query)
         status_code = 200 if lidarr_data is not None else 404
