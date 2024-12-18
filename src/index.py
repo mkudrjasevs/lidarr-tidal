@@ -61,7 +61,10 @@ def do_api(req, path):
     lidarr_data = response.json()
     status_code = 200 if lidarr_data is not None else 404
 
-    if "/v0.4/search" in url or "/v1/search" in url:
+    if "/ping" in url:
+        return "pong", 200
+
+    elif "/v0.4/search" in url or "/v1/search" in url:
         query = req.args.get("query")
         lidarr_data = search(query)
         status_code = 200 if lidarr_data is not None else 404
@@ -85,7 +88,8 @@ def do_api(req, path):
         if "-bbbb-" in path:
             album_id = path.split("/")[-1].split("-")[-1].replace("b", "")
             lidarr_data = get_album(album_id)
-            status_code = 200 if lidarr_data is not None else 404
+            # 502 because the album definitely exists, might be running into rate limit
+            status_code = 200 if lidarr_data is not None else 502
         return jsonify(lidarr_data), status_code
 
     # Passthrough to Lidarr api (for example for Charts and Series)
