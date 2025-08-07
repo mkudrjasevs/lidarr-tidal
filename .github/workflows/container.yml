@@ -1,5 +1,7 @@
 name: Container
 run-name: ${{ github.ref_name }} - Publishing Container 
+
+on: workflow_dispatch
 on:
   push:
     branches: ['main']
