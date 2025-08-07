@@ -19,7 +19,7 @@ urls_expire_after = {
     'api.tidal.com/v1/users*': requests_cache.DO_NOT_CACHE,
     'auth.tidal.com/*': requests_cache.DO_NOT_CACHE,
     'api.tidal.com/v1/*': 60 * 60 * 24 * 4, # 4 days
-    'api.lidarr.audio/*': requests_cache.DO_NOT_CACHE,
+    'api.musicinfo.pro/*': requests_cache.DO_NOT_CACHE,
     'ws.audioscrobbler.com/*': requests_cache.DO_NOT_CACHE,
 }
 requests_cache.install_cache(cache_name=os.environ.get('CACHE_FILE'),
