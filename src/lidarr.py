@@ -4,7 +4,7 @@ import os
 
 from helpers import normalize
 
-lidarr_api_url = "https://api.lidarr.audio"
+lidarr_api_url = "https://api.musicinfo.pro"
 
 
 def get_lidarr_artist(name: str) -> Optional[Dict[str, Any]]:
