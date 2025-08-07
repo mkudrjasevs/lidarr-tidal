@@ -12,7 +12,7 @@ from helpers import remove_keys
 
 app = Flask(__name__)
 
-lidarr_api_url = "https://api.lidarr.audio"
+lidarr_api_url = "https://api.musicinfo.pro"
 scrobbler_api_url = "https://ws.audioscrobbler.com"
 
 
